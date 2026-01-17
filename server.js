@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // =======================
 // MIDDLEWARE
@@ -40,6 +40,7 @@ async function initDb() {
         console.log('✅ DATABASE CONNECTED');
         dbConnected = true;
 
+        // Default Admin Hash (admin22)
         const ADMIN_HASH = crypto
             .createHash('sha256')
             .update('admin22')
@@ -98,7 +99,7 @@ app.get('/', (req, res) => {
     });
 });
 
-// Specific API health check that works through Vercel /api/* proxy
+// Specific API health check
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'online',
@@ -152,9 +153,6 @@ app.get('/api/data', checkDb, async (req, res) => {
     }
 });
 
-// =======================
-// SYNC ROUTE
-// =======================
 app.post('/api/sync', checkDb, async (req, res) => {
     const { type, data } = req.body;
     if (!type || !data) return res.status(400).json({ status: 'error', message: 'Missing type or data' });
