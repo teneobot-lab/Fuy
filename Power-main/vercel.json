@@ -1,0 +1,13 @@
+
+{
+  "rewrites": [
+    { 
+      "source": "/api/:match*", 
+      "destination": "http://178.128.106.33:3000/api/:match*" 
+    },
+    { 
+      "source": "/(.*)", 
+      "destination": "/index.html" 
+    }
+  ]
+}

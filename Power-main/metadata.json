@@ -1,0 +1,7 @@
+{
+  "name": "Power Inventory",
+  "description": "Enterprise Warehouse Management System with VPS/MySQL Backend and Gemini AI Integration.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
