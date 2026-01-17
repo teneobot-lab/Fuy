@@ -4,7 +4,7 @@ import { User, AppSettings, UserRole } from '../types';
 import { generateId, saveToStorage, loadFromStorage } from '../utils/storageUtils';
 import { checkServerConnection } from '../services/api';
 import { hashPassword } from '../utils/security';
-import { Save, Shield, X, Globe, Loader2, Wifi, CheckCircle2, AlertCircle, FileSpreadsheet, RefreshCw, Clock, Database, Trash2, Edit2, Wrench, Download, Upload, RotateCcw } from 'lucide-react';
+import { Save, Shield, X, Globe, Loader2, Wifi, CheckCircle2, AlertCircle, FileSpreadsheet, RefreshCw, Clock, Database, Trash2, Edit2, Wrench, Download, Upload, RotateCcw, XCircle } from 'lucide-react';
 
 interface AdminPanelProps {
   settings: AppSettings;
@@ -42,6 +42,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     })); 
   }, [settings]);
 
+  // Reset status saat tab berubah
+  useEffect(() => {
+    setConnectionStatus('idle');
+    setConnectionMsg('');
+  }, [activeTab]);
+
   const handleSaveSettings = () => {
     onUpdateSettings(tempSettings);
     setIsSaved(true);
@@ -56,6 +62,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           return;
       }
       setConnectionStatus('checking');
+      setConnectionMsg('Sedang menghubungi server...');
+      
       const result = await checkServerConnection(url);
       setConnectionStatus(result.online ? 'success' : 'failed');
       setConnectionMsg(result.message);
@@ -67,6 +75,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
       try {
           const success = await onFullSyncToSheets();
           if (success) {
+            // Update local timestamp after successful sync
             setTempSettings(prev => ({ ...prev, lastSheetSync: new Date().toISOString() }));
           }
       } catch (e) {
@@ -126,6 +135,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   // Helper aman untuk cek includes pada URL yang mungkin undefined
   const isGasUrlValid = (url?: string) => (url || '').includes('script.google.com');
 
+  const getButtonStyles = (status: string) => {
+    if (status === 'success') return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200';
+    if (status === 'failed') return 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200';
+    if (status === 'checking') return 'bg-slate-700 text-slate-300 cursor-wait';
+    return 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200';
+  };
+
   return (
     <div className="space-y-6 animate-fade-in flex flex-col h-full overflow-hidden">
       <div className="flex flex-col md:flex-row gap-6 h-full overflow-hidden">
@@ -165,18 +181,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                         <input 
                             type="text" 
                             className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono bg-slate-50" 
-                            placeholder="http://178.128.106.33:3000" 
+                            placeholder="http://178.128.106.33:3001" 
                             value={tempSettings.vpsApiUrl || ''} 
                             onChange={(e) => setTempSettings({...tempSettings, vpsApiUrl: e.target.value})} 
                         />
-                        <button onClick={() => handleTestConnection('vps')} className="px-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 flex items-center gap-2">
-                           {connectionStatus === 'checking' && activeTab === 'settings' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
-                           Tes VPS
+                        <button 
+                            onClick={() => handleTestConnection('vps')} 
+                            disabled={connectionStatus === 'checking'}
+                            className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md transition-all ${getButtonStyles(connectionStatus)}`}
+                        >
+                           {connectionStatus === 'checking' ? <Loader2 className="w-4 h-4 animate-spin" /> : 
+                            connectionStatus === 'success' ? <CheckCircle2 className="w-4 h-4" /> : 
+                            connectionStatus === 'failed' ? <XCircle className="w-4 h-4" /> : 
+                            <Wifi className="w-4 h-4" />}
+                           {connectionStatus === 'checking' ? 'Mengecek...' : 'Tes Koneksi'}
                         </button>
                     </div>
+                    {connectionMsg && (
+                      <div className={`mt-3 p-3 rounded-xl text-xs font-bold border flex items-center gap-2 animate-in slide-in-from-top-2 ${connectionStatus === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : connectionStatus === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                          {connectionStatus === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : connectionStatus === 'failed' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <Loader2 className="w-4 h-4 shrink-0 animate-spin" />}
+                          {connectionMsg}
+                      </div>
+                    )}
                   </div>
                   <div className="pt-6 border-t flex items-center gap-4">
-                     <button onClick={handleSaveSettings} className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 transition-all">
+                     <button onClick={handleSaveSettings} className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 transition-all active:scale-95">
                         <Save className="w-4 h-4" /> Simpan Pengaturan
                      </button>
                      {isSaved && <span className="text-emerald-600 text-sm font-bold animate-pulse"><CheckCircle2 className="inline w-4 h-4 mr-1" /> Tersimpan</span>}
@@ -204,15 +233,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                 value={tempSettings.viteGasUrl || ''} 
                                 onChange={(e) => setTempSettings({...tempSettings, viteGasUrl: e.target.value})} 
                             />
-                            <button onClick={() => handleTestConnection('gas')} className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 flex items-center gap-2">
-                                {connectionStatus === 'checking' && activeTab === 'cloud' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
-                                Tes GAS
+                            <button 
+                                onClick={() => handleTestConnection('gas')} 
+                                disabled={connectionStatus === 'checking'}
+                                className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md transition-all ${getButtonStyles(connectionStatus)}`}
+                            >
+                                {connectionStatus === 'checking' ? <Loader2 className="w-4 h-4 animate-spin" /> : 
+                                 connectionStatus === 'success' ? <CheckCircle2 className="w-4 h-4" /> : 
+                                 connectionStatus === 'failed' ? <XCircle className="w-4 h-4" /> : 
+                                 <Wifi className="w-4 h-4" />}
+                                {connectionStatus === 'checking' ? 'Mengecek...' : 'Tes GAS'}
                             </button>
                         </div>
                     </div>
-                    {connectionMsg && activeTab === 'cloud' && (
-                        <div className={`p-3 rounded-lg text-xs font-medium border flex items-center gap-2 ${connectionStatus === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
-                            {connectionStatus === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    {connectionMsg && (
+                        <div className={`p-3 rounded-xl text-xs font-bold border flex items-center gap-2 animate-in slide-in-from-top-2 ${connectionStatus === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : connectionStatus === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                            {connectionStatus === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : connectionStatus === 'failed' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <Loader2 className="w-4 h-4 shrink-0 animate-spin" />}
                             {connectionMsg}
                         </div>
                     )}

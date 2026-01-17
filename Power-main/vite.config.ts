@@ -1,4 +1,3 @@
-
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -9,9 +8,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Penting: Polyfill process.env agar tidak crash di browser
       'process.env': {
-        API_KEY: env.VITE_API_KEY || '' // Mapping VITE_API_KEY ke process.env.API_KEY
+        API_KEY: env.VITE_API_KEY || '' 
       }
     },
     server: {
@@ -19,10 +17,9 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: 'http://178.128.106.33:3000', // Proxy lokal diarahkan langsung ke VPS baru
+          target: 'http://178.128.106.33:3001', // Direct ke VPS IP Port 3001
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path 
         }
       }
     }

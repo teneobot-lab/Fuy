@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: 'http://l78.128.106.33:3001',
+          target: 'http://178.128.106.33:3001', // Direct ke VPS IP
           changeOrigin: true,
           secure: false,
         }

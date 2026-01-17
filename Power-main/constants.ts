@@ -20,7 +20,7 @@ export const INITIAL_USERS: User[] = [
 ];
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  vpsApiUrl: '/', // Default ke '/' agar otomatis menggunakan proxy di vite.config.ts / vercel.json
+  vpsApiUrl: 'http://178.128.106.33:3001', // Menggunakan IP langsung untuk menghindari masalah proxy lokal
   viteGasUrl: '', 
   youtubeApiKey: '',
   tiktokConfig: '',
