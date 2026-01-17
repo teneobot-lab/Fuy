@@ -33,7 +33,7 @@ export const fetchBackendData = async (baseUrl: string): Promise<FullState | nul
 
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("text/html")) {
-        return null;
+        return null; // Handle proxy returning HTML for 404s/Roots
     }
 
     if (!response.ok) return null;
@@ -57,6 +57,11 @@ export const loginUser = async (baseUrl: string, username: string, password: str
             body: JSON.stringify({ username, password })
         });
 
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("text/html")) {
+             return { success: false, message: 'Server Configuration Error: API Route Not Found (Received HTML)' };
+        }
+
         const json = await response.json();
 
         if (response.ok && json.status === 'success') {
@@ -65,7 +70,7 @@ export const loginUser = async (baseUrl: string, username: string, password: str
             return { success: false, message: json.message || 'Login gagal' };
         }
     } catch (error: any) {
-        return { success: false, message: 'Gagal terhubung ke server (Network Error)' };
+        return { success: false, message: 'Gagal terhubung ke server (Network Error). Cek koneksi internet atau konfigurasi IP.' };
     }
 };
 
@@ -101,6 +106,7 @@ export const syncBackendData = async (
 
 /**
  * Enhanced Server Connection Check
+ * Checks /api/health to ensure proxy rewriting works correctly
  */
 export const checkServerConnection = async (baseUrl: string): Promise<{ 
   online: boolean; 
@@ -118,8 +124,8 @@ export const checkServerConnection = async (baseUrl: string): Promise<{
         return { online: true, message: 'Format URL Google Apps Script valid.', dbStatus: 'UNKNOWN', latency: Date.now() - start };
     }
     
-    // Gunakan root path atau data path untuk cek hidup/matinya server
-    const url = `${cleanBase}/`; 
+    // Gunakan endpoint /api/health agar tembus lewat Vercel Rewrite
+    const url = `${cleanBase}/api/health`; 
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); 
@@ -130,11 +136,17 @@ export const checkServerConnection = async (baseUrl: string): Promise<{
     const latency = Date.now() - start;
 
     if (response.status === 502 || response.status === 504) {
-        return { online: false, message: 'Gateway Error: VPS Port mungkin tertutup.' };
+        return { online: false, message: 'Gateway Error: VPS Port mungkin tertutup atau down.' };
     }
     
     if (response.status === 503) {
         return { online: true, message: 'Server Aktif, Database MySQL Terputus.', dbStatus: 'DISCONNECTED', latency };
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("text/html")) {
+        // Ini terjadi jika rewrite gagal dan Vercel mengembalikan index.html (React App)
+        return { online: false, message: 'Routing Error: Server mengembalikan HTML bukan JSON. Cek konfigurasi Rewrite/Proxy.' };
     }
 
     if (response.ok) {
@@ -148,14 +160,14 @@ export const checkServerConnection = async (baseUrl: string): Promise<{
                 latency 
             };
         }
-        return { online: true, message: 'Server merespon.', dbStatus: 'UNKNOWN', latency };
+        return { online: true, message: 'Server merespon, tapi format tidak dikenali.', dbStatus: 'UNKNOWN', latency };
     } else {
         return { online: false, message: `Server error: ${response.status}` };
     }
   } catch (error: any) {
     return { 
       online: false, 
-      message: error.name === 'AbortError' ? 'Koneksi Timeout.' : 'Server tidak dapat dijangkau.' 
+      message: error.name === 'AbortError' ? 'Koneksi Timeout.' : 'Server tidak dapat dijangkau (Network Error).' 
     };
   }
 };

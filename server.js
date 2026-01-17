@@ -89,10 +89,21 @@ const checkDb = (req, res, next) => {
 // ROUTES
 // =======================
 
+// Root endpoint for direct checks
 app.get('/', (req, res) => {
     res.json({
         status: 'online',
-        database: dbConnected ? 'connected' : 'offline'
+        database: dbConnected ? 'connected' : 'offline',
+        service: 'smartstock-backend'
+    });
+});
+
+// Specific API health check that works through Vercel /api/* proxy
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'online',
+        database: dbConnected ? 'connected' : 'offline',
+        timestamp: new Date().toISOString()
     });
 });
 
